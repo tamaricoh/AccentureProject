@@ -1,5 +1,7 @@
 # LLM Project for Accenture
 
+This project implements a **multi-class classification** model using **BERT** for sequence classification. The model is designed to handle **imbalanced data** and is trained using techniques like **K-fold cross-validation** for robust evaluation.
+
 ## Environment Setup
 
 The project was developed in a **Conda environment** using Python 3.12. All the necessary libraries and dependencies were installed within this environment to ensure smooth execution and reproducibility.
