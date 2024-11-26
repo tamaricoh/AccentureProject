@@ -16,9 +16,6 @@ num_epochs = 3
 learning_rate = 1e-5
 num_folds = 5  # Number of folds
 batch_size = 16
-output_model_path = "bert_model_final.pth"
-timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-output_model_path = f"model_{timestamp}.pth"
 
 
 def train_with_validation(model, train_loader, val_loader, optimizer, scheduler, device, num_epochs):
@@ -287,6 +284,9 @@ print(f"Average Accuracy: {average_accuracy:.2f}%")
 
 # Test the model on the test set
 test(model, test_loader, device)
+
+timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+output_model_path = f"model_{timestamp}.pth"
 
 torch.save(model.state_dict(), output_model_path)
 print(f"Model saved to {output_model_path}")
