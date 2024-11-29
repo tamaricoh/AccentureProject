@@ -148,13 +148,6 @@ train_val_df, test_df = train_test_split(filtered_df,
                                          stratify=filtered_df['Artifact Id'],
                                          random_state=42)
 
-# train_df, val_df = train_test_split(train_df,
-#                                     test_size=0.2,
-#                                     stratify=train_df['Artifact Id'],
-#                                     random_state=42)
-
-# model = BertForSequenceClassification.from_pretrained(
-#     'bert-base-uncased', num_labels=len(filtered_labels_list))
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 
 
@@ -162,55 +155,7 @@ def tokenize_data(texts):
     return tokenizer(texts, padding=True, truncation=True, return_tensors='pt', max_length=512)
 
 
-# # Tokenize the training, validation, and test data
-# train_encodings = tokenize_data(train_df['Example Description'].tolist())
-# val_encodings = tokenize_data(
-#     val_df['Example Description'].tolist())  # Validation set
-# test_encodings = tokenize_data(test_df['Example Description'].tolist())
-
-# # Convert labels to tensors
-# train_labels = torch.tensor(train_df['Artifact Id'].map(
-#     lambda x: filtered_labels_list.index(x)).tolist())
-# val_labels = torch.tensor(val_df['Artifact Id'].map(
-#     lambda x: filtered_labels_list.index(x)).tolist())  # Validation set
-# test_labels = torch.tensor(test_df['Artifact Id'].map(
-#     lambda x: filtered_labels_list.index(x)).tolist())
-
-# train_dataset = TensorDataset(
-#     train_encodings['input_ids'], train_encodings['attention_mask'], train_labels)
-# val_dataset = TensorDataset(
-#     val_encodings['input_ids'], val_encodings['attention_mask'], val_labels)  # Validation set
-# test_dataset = TensorDataset(
-#     test_encodings['input_ids'], test_encodings['attention_mask'], test_labels)
-
-# train_loader = DataLoader(
-#     train_dataset, sampler=RandomSampler(train_dataset), batch_size=batch_size)
-# val_loader = DataLoader(val_dataset, sampler=SequentialSampler(
-#     val_dataset), batch_size=batch_size)  # Validation set
-# test_loader = DataLoader(
-#     test_dataset, sampler=SequentialSampler(test_dataset), batch_size=batch_size)
-
-# optimizer = AdamW(model.parameters(), lr=learning_rate)
-
-# total_steps = len(train_loader) * num_epochs
-
-# scheduler = get_linear_schedule_with_warmup(
-#     optimizer, num_warmup_steps=0, num_training_steps=total_steps)
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-# model.to(device)
-
-# train_with_validation(
-#     model=model,
-#     train_loader=train_loader,
-#     val_loader=val_loader,
-#     optimizer=optimizer,
-#     scheduler=scheduler,
-#     device=device,
-#     num_epochs=num_epochs
-# )
-
-# test(model, test_loader, device)
 
 
 test_encodings = tokenize_data(test_df['Example Description'].tolist())
