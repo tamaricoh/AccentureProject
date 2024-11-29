@@ -18,7 +18,7 @@ Each trained model is saved with a timestamped filename (e.g., `model_YYY-MM-DD.
 - **F1 Score (Weighted)**
 - **Accuracy**
 
-The model `model_2024-11-29_11-36-12.pth` achieved the following results on the test set, as shown in the baselineVSmodel_predictions.csv file:
+The model `model_2024-11-29_11-36-12.pth` achieved the following results on the test set, as shown in the `baselineVSmodel_predictions.csv` file:
 
 - **F1 Score (Weighted):** 0.4048
 - **Accuracy:** 50.00%
