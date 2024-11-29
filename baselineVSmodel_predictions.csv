@@ -1,17 +1,17 @@
-Artifact Id,baseline Prediction,model_2024-11-26_21-46-02 Prediction
-d3f:OperatingSystem,InterprocessCommunication,d3f:DisplayServer
+Artifact Id,baseline Prediction,model_2024-11-29_11-36-12 Prediction
+d3f:OperatingSystem,InterprocessCommunication,d3f:Software
 d3f:Software,FileSystem,d3f:Software
+d3f:Database,HardwareDriver,d3f:Database
+d3f:DisplayServer,Software,d3f:HardwareDriver
 d3f:Database,HardwareDriver,d3f:Software
-d3f:DisplayServer,Software,d3f:Database
-d3f:Database,HardwareDriver,d3f:OperatingSystem
 d3f:Software,InterprocessCommunication,d3f:Software
-d3f:FileSystem,FileSystem,d3f:OperatingSystem
-d3f:HardwareDriver,HardwareDriver,d3f:Software
-d3f:Software,DisplayServer,d3f:Database
-d3f:HardwareDriver,BootLoader,d3f:Database
+d3f:FileSystem,FileSystem,d3f:HardwareDriver
+d3f:HardwareDriver,HardwareDriver,d3f:HardwareDriver
+d3f:Software,DisplayServer,d3f:Software
+d3f:HardwareDriver,BootLoader,d3f:HardwareDriver
 d3f:InterprocessCommunication,Database,d3f:DisplayServer
-d3f:OperatingSystem,OperatingSystem,d3f:DisplayServer
+d3f:OperatingSystem,OperatingSystem,d3f:Software
 d3f:Software,Database,d3f:Software
-d3f:Database,DisplayServer,d3f:Software
-d3f:DisplayServer,HardwareDriver,d3f:Database
-d3f:Database,Software,d3f:OperatingSystem
+d3f:Database,DisplayServer,d3f:Database
+d3f:DisplayServer,HardwareDriver,d3f:HardwareDriver
+d3f:Database,Software,d3f:Software
