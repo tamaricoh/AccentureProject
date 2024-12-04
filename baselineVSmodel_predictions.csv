@@ -1,4 +1,4 @@
-Artifact Id,baseline Prediction,model_2024-11-29_11-36-12 Prediction
+Artifact Id,baseline Prediction,model_2024-12-03_15-20-23.pth prediction
 d3f:OperatingSystem,InterprocessCommunication,d3f:Software
 d3f:Software,FileSystem,d3f:Software
 d3f:Database,HardwareDriver,d3f:Database
