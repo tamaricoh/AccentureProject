@@ -1,3 +1,7 @@
+Here is the revised text:
+
+---
+
 # LLM Project for Accenture
 
 This project implements a **multi-class classification** model using **BERT** for sequence classification. The model is designed to handle **imbalanced data** and is trained using techniques like **K-fold cross-validation** for robust evaluation.
@@ -18,15 +22,29 @@ Each trained model is saved with a timestamped filename (e.g., `model_YYY-MM-DD.
 - **F1 Score (Weighted)**
 - **Accuracy**
 
-The model `model_2024-11-29_11-36-12.pth` achieved the following results on the test set, as shown in the `baselineVSmodel_predictions.csv` file:
+### Model Performance:
 
-- **F1 Score (Weighted):** 0.4048
-- **Accuracy:** 50.00%
+- **Baseline Model:**
 
-baselineVSmodel_predictions
+  - **F1 Score (Weighted):** 0.1667
+  - **Accuracy:** 18.75%
+
+- **Model with Weighted Average (model_avr):**
+
+  - **F1 Score (Weighted):** 0.1556
+  - **Accuracy:** 25.00%
+
+- **CVE Data Predictions:**
+  - Predictions saved to `cve_data_predictions.csv`
+  - **Accuracy:** 52.78%
+  - **F1 Score (Weighted):** 0.38
+
+**Note:** The performance on the CVE data appears suspicious and might require further validation.
 
 ## Requirements
 
 - Conda environment (Python 3.12)
 - Necessary Python packages (listed in the notebook)
 - Dataset file (`dataset.csv`)
+
+---
