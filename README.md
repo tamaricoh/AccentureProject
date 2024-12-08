@@ -1,4 +1,4 @@
-Here is the revised text:
+Here is the updated text as per your request:
 
 ---
 
@@ -29,12 +29,12 @@ Each trained model is saved with a timestamped filename (e.g., `model_YYY-MM-DD.
   - **F1 Score (Weighted):** 0.1667
   - **Accuracy:** 18.75%
 
-- **Model with Weighted Average (model_avr):**
+- **Model with Weighted Average over the Same Set (model_avr):**
 
   - **F1 Score (Weighted):** 0.1556
   - **Accuracy:** 25.00%
 
-- **CVE Data Predictions:**
+- **Model with Weighted Average over CVE Data:**
   - Predictions saved to `cve_data_predictions.csv`
   - **Accuracy:** 52.78%
   - **F1 Score (Weighted):** 0.38
