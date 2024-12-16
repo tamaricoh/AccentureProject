@@ -37,6 +37,11 @@ For the model trained on **2024-12-16_12-53-34**, the performance on the baselin
 - **F1 Score (Weighted):** 0.4080
 - **Accuracy:** 43.75%
 
+For the model trained on **2024-12-16_14-53-35**, the performance on the baseline dataset is:
+
+- **F1 Score (Weighted):** 0.5568
+- **Accuracy:** 62.50%
+
 For comparison, the baseline performance is:
 
 - **Baseline Accuracy:** 18.75%
