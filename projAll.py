@@ -12,7 +12,7 @@ from sklearn.metrics import f1_score
 from sklearn.metrics import accuracy_score
 
 timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-output_model_path = f"model_{timestamp}.pth"
+output_model_path = f"models/model_{timestamp}.pth"
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -158,7 +158,7 @@ def test(model, test_loader, device):
     return predictions, true_labels
 
 
-df = pd.read_csv('dataset.csv')
+df = pd.read_csv('csv/dataset.csv')
 
 labels = df['Artifact Id']
 
