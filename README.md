@@ -37,10 +37,15 @@ For the model trained on **2024-12-16_12-53-34**, the performance on the baselin
 - **F1 Score (Weighted):** 0.4080
 - **Accuracy:** 43.75%
 
-For the model trained on **2024-12-16_14-53-35**, the performance on the baseline dataset is:
+For the model trained on **2024-12-16_14-53-35**, the performance are as follows:
 
-- **F1 Score (Weighted):** 0.5568
-- **Accuracy:** 62.50%
+- **F1 Score (Weighted) on baseline dataset:** 0.5568
+- **Accuracy on baseline dataset:** 62.50%
+
+Additionally, the results over the CVE were:
+
+- **F1 Score (Weighted) on CVE:** 0.2737
+- **Accuracy on CVE:** 19.44%
 
 For comparison, the baseline performance is:
 
