@@ -1,24 +1,69 @@
 import numpy as np
 import pandas as pd
 import torch
+import datetime
+from torch import nn
 from tqdm.notebook import tqdm
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split, StratifiedKFold
-from transformers import BertTokenizer, BertForSequenceClassification
+from transformers import BertTokenizer, BertForSequenceClassification, AdamW, get_linear_schedule_with_warmup
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
-from transformers import AdamW, get_linear_schedule_with_warmup
 from sklearn.metrics import f1_score
-from sklearn.utils import shuffle
-from sklearn.model_selection import KFold
-import datetime
+from sklearn.metrics import accuracy_score
 
-num_epochs = 3
-learning_rate = 1e-5
-num_folds = 5  # Number of folds
+timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+output_model_path = f"model_{timestamp}.pth"
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+num_epochs = 4
+learning_rate = 5e-5
 batch_size = 16
 
 
-def train_with_validation(model, train_loader, val_loader, optimizer, scheduler, device, num_epochs):
+class CustomBertModel(nn.Module):
+    def __init__(self, num_labels):
+        super(CustomBertModel, self).__init__()
+        # Use BertForSequenceClassification directly
+        self.bert = BertForSequenceClassification.from_pretrained(
+            'bert-base-uncased', num_labels=num_labels)
+
+    def forward(self, input_ids, attention_mask, labels=None):
+        outputs = self.bert(input_ids=input_ids,
+                            attention_mask=attention_mask, labels=labels)
+
+        logits = outputs.logits
+
+        loss = None
+        if labels is not None:
+            loss = outputs.loss
+
+        return {"loss": loss, "logits": logits}
+
+
+def tokenize_data(texts, tokenizer):
+    return tokenizer(texts, padding=True, truncation=True, return_tensors='pt', max_length=512)
+
+
+def create_dataset(df, tokenizer, filtered_labels_balance_list):
+    texts = df['Example Description'].tolist()
+    encodings = tokenize_data(texts, tokenizer)
+
+    label_mapping = {label: idx for idx,
+                     label in enumerate(filtered_labels_balance_list)}
+
+    # Default to -1 for unknown labels
+    labels = torch.tensor([label_mapping.get(x, -1)
+                          for x in df['Artifact Id']])
+
+    input_ids = encodings['input_ids']
+    attention_mask = encodings['attention_mask']
+
+    dataset = TensorDataset(input_ids, attention_mask, labels)
+    return dataset
+
+
+def train_with_validation(model, train_loader, val_loader, optimizer, device, num_epochs):
     for epoch in range(num_epochs):
         model.train()
         total_loss = 0
@@ -35,8 +80,8 @@ def train_with_validation(model, train_loader, val_loader, optimizer, scheduler,
 
             outputs = model(input_ids=input_ids,
                             attention_mask=attention_mask, labels=labels)
-            loss = outputs.loss
-            logits = outputs.logits
+            loss = outputs['loss']
+            logits = outputs['logits']
 
             preds = torch.argmax(logits, dim=-1)
 
@@ -49,17 +94,15 @@ def train_with_validation(model, train_loader, val_loader, optimizer, scheduler,
 
             loss.backward()
             optimizer.step()
-            scheduler.step()
 
             total_loss += loss.item()
 
         # Calculate training metrics
-        accuracy = total_correct / total_samples * 100
+        accuracy = accuracy_score(all_labels, all_preds) * 100
         f1 = f1_score(all_labels, all_preds, average="weighted")
 
         # Validation phase
         model.eval()
-        val_loss = 0
         val_correct = 0
         val_samples = 0
         val_all_labels = []
@@ -72,7 +115,7 @@ def train_with_validation(model, train_loader, val_loader, optimizer, scheduler,
 
                 outputs = model(input_ids=input_ids,
                                 attention_mask=attention_mask)
-                logits = outputs.logits
+                logits = outputs['logits']
 
                 preds = torch.argmax(logits, dim=-1)
 
@@ -83,9 +126,7 @@ def train_with_validation(model, train_loader, val_loader, optimizer, scheduler,
                 val_correct += correct
                 val_samples += labels.size(0)
 
-                val_loss += loss.item()
-
-        val_accuracy = val_correct / val_samples * 100
+        val_accuracy = accuracy_score(val_all_labels, val_all_preds) * 100
         val_f1 = f1_score(val_all_labels, val_all_preds, average="weighted")
 
         print(
@@ -103,9 +144,8 @@ def test(model, test_loader, device):
             input_ids, attention_mask, labels = [
                 item.to(device) for item in batch]
 
-            outputs = model(input_ids=input_ids,
-                            attention_mask=attention_mask)
-            logits = outputs.logits
+            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+            logits = outputs['logits']
 
             preds = torch.argmax(logits, dim=-1)
             predictions.extend(preds.cpu().numpy())
@@ -115,8 +155,7 @@ def test(model, test_loader, device):
     f1 = f1_score(true_labels, predictions, average='weighted')
 
     # Calculate accuracy
-    accuracy = np.sum(np.array(predictions) == np.array(
-        true_labels)) / len(true_labels) * 100
+    accuracy = accuracy_score(true_labels, predictions) * 100
 
     print(f"F1 Score (Weighted): {f1:.4f}")
     print(f"Accuracy: {accuracy:.2f}%")
@@ -128,113 +167,59 @@ labels = df['Artifact Id']
 
 label_counts = labels.value_counts()
 
-filtered_labels = label_counts[(label_counts >= 5) & (
-    label_counts <= 200)]  # Remove "Command" label
+filtered_labels_at_least_5 = label_counts[label_counts >= 5]
 
-filtered_labels_list = filtered_labels.index.tolist()
+filtered_labels_at_least_5_list = filtered_labels_at_least_5.index.tolist()
 
-filtered_df = df[df['Artifact Id'].isin(filtered_labels_list)]
+filtered_df = df[df['Artifact Id'].isin(filtered_labels_at_least_5_list)]
+
+print(filtered_df['Artifact Id'].value_counts())
+
+filtered_labels_balance = label_counts[(
+    label_counts >= 5) & (label_counts <= 200)]
+
+filtered_labels_balance_list = filtered_labels_balance.index.tolist()
+
+filtered_balance_df = df[df['Artifact Id'].isin(filtered_labels_balance_list)]
 
 command_df = df[df['Artifact Id'] == 'd3f:Command']
-sampled_command_df = command_df.sample(n=16, random_state=42)
-combined_df = pd.concat([filtered_df, sampled_command_df])
+sample_size = min(len(command_df), 16)
+sampled_command_df = command_df.sample(n=sample_size, random_state=42)
+combined_df = pd.concat([filtered_balance_df, sampled_command_df])
 
 combined_df.reset_index(drop=True, inplace=True)
 
 print(combined_df['Artifact Id'].value_counts())
 
-train_val_df, test_df = train_test_split(filtered_df,
+train_val_df, test_df = train_test_split(combined_df,
                                          test_size=0.2,
-                                         stratify=filtered_df['Artifact Id'],
+                                         stratify=combined_df['Artifact Id'],
                                          random_state=42)
+train_df, val_df = train_test_split(train_val_df,
+                                    test_size=0.2,
+                                    stratify=train_val_df['Artifact Id'],
+                                    random_state=42)
 
+model = CustomBertModel(num_labels=len(filtered_labels_at_least_5_list))
+optimizer = AdamW(model.parameters(), lr=learning_rate)
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+model.to(device)
 
+train_dataset = create_dataset(
+    train_df, tokenizer, filtered_labels_at_least_5_list)
+val_dataset = create_dataset(
+    val_df, tokenizer, filtered_labels_at_least_5_list)
+test_dataset = create_dataset(
+    test_df, tokenizer, filtered_labels_at_least_5_list)
 
-def tokenize_data(texts):
-    return tokenizer(texts, padding=True, truncation=True, return_tensors='pt', max_length=512)
-
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-test_encodings = tokenize_data(test_df['Example Description'].tolist())
-test_labels = torch.tensor(test_df['Artifact Id'].map(
-    lambda x: filtered_labels_list.index(x)).tolist())
-test_dataset = TensorDataset(
-    test_encodings['input_ids'], test_encodings['attention_mask'], test_labels)
+# Create DataLoaders
+train_loader = DataLoader(train_dataset, sampler=RandomSampler(
+    train_dataset), batch_size=batch_size)
+val_loader = DataLoader(val_dataset, sampler=SequentialSampler(
+    val_dataset), batch_size=batch_size)
 test_loader = DataLoader(test_dataset, sampler=SequentialSampler(
     test_dataset), batch_size=batch_size)
 
-# K-Fold Cross Validation on 80% train/val data
-skf = StratifiedKFold(n_splits=num_folds, shuffle=True, random_state=42)
-fold_results = []  # Store F1 score and accuracy for each fold
-
-for fold, (train_index, val_index) in enumerate(skf.split(train_val_df, train_val_df['Artifact Id'])):
-    print(f"\n--- Fold {fold+1}/{num_folds} ---")
-
-    # Split the train/val set into training and validation data for this fold
-    train_df = train_val_df.iloc[train_index]
-    val_df = train_val_df.iloc[val_index]
-
-    # Tokenize the training and validation data
-    train_encodings = tokenize_data(train_df['Example Description'].tolist())
-    val_encodings = tokenize_data(val_df['Example Description'].tolist())
-
-    # Map labels to indices for training and validation
-    train_labels = torch.tensor(train_df['Artifact Id'].map(
-        lambda x: filtered_labels_list.index(x)).tolist())
-    val_labels = torch.tensor(val_df['Artifact Id'].map(
-        lambda x: filtered_labels_list.index(x)).tolist())
-
-    # Create TensorDatasets for training and validation
-    train_dataset = TensorDataset(
-        train_encodings['input_ids'], train_encodings['attention_mask'], train_labels)
-    val_dataset = TensorDataset(
-        val_encodings['input_ids'], val_encodings['attention_mask'], val_labels)
-
-    # Create DataLoaders for training and validation
-    train_loader = DataLoader(train_dataset, sampler=RandomSampler(
-        train_dataset), batch_size=batch_size)
-    val_loader = DataLoader(val_dataset, sampler=SequentialSampler(
-        val_dataset), batch_size=batch_size)
-
-    # Initialize model, optimizer, and scheduler
-    model = BertForSequenceClassification.from_pretrained(
-        'bert-base-uncased', num_labels=len(filtered_labels_list))
-    model.to(device)
-    optimizer = AdamW(model.parameters(), lr=learning_rate)
-    total_steps = len(train_loader) * num_epochs
-    scheduler = get_linear_schedule_with_warmup(
-        optimizer, num_warmup_steps=0, num_training_steps=total_steps
-    )
-
-    # Train the model with validation
-    train_with_validation(
-        model=model,
-        train_loader=train_loader,
-        val_loader=val_loader,
-        optimizer=optimizer,
-        scheduler=scheduler,
-        device=device,
-        num_epochs=num_epochs
-    )
-
-# Average results over all folds
-average_f1 = np.mean([result[0] for result in fold_results])
-average_accuracy = np.mean([result[1] for result in fold_results])
-print(f"\n--- K-Fold Results ---")
-print(f"Average F1 Score (Weighted): {average_f1:.4f}")
-print(f"Average Accuracy: {average_accuracy:.2f}%")
-
-# Test the model on the test set
+train_with_validation(model, train_loader, val_loader,
+                      optimizer, device, num_epochs)
 test(model, test_loader, device)
-
-timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-output_model_path = f"model_{timestamp}.pth"
-
-torch.save(model.state_dict(), output_model_path)
-print(f"Model saved to {output_model_path}")
-
-test_df.to_csv('test_data.csv', index=False)
-print("DataFrame saved to test_data.csv")
