@@ -59,12 +59,11 @@ def create_dataset(df, tokenizer, label_mapping):
     return dataset
 
 
-def train_with_validation(model, train_loader, val_loader, optimizer, device, num_epochs):
+def train(model, train_loader, optimizer, device, num_epochs):
     for epoch in range(num_epochs):
         model.train()
         total_loss = 0
-        total_correct = 0
-        total_samples = 0
+
         all_labels = []
         all_preds = []
 
@@ -84,23 +83,58 @@ def train_with_validation(model, train_loader, val_loader, optimizer, device, nu
             all_preds.extend(preds.cpu().tolist())
             all_labels.extend(labels.cpu().tolist())
 
-            correct = (preds == labels).sum().item()
-            total_correct += correct
-            total_samples += labels.size(0)
+            loss.backward()
+            optimizer.step()
+
+            total_loss += loss.item()
+
+        accuracy = accuracy_score(all_labels, all_preds) * 100
+        f1 = f1_score(all_labels, all_preds, average="weighted")
+
+        print(
+            f"Epoch {epoch+1}, Loss: {total_loss / len(train_loader):.4f}, Accuracy: {accuracy:.2f}%, F1 Score: {f1:.4f}")
+
+
+def train_with_validation(model, train_loader, val_loader, optimizer, device, num_epochs):
+    f1_train = []
+    f1_val = []
+    acc_train = []
+    acc_val = []
+
+    for epoch in range(num_epochs):
+        model.train()
+        total_loss = 0
+        all_labels = []
+        all_preds = []
+
+        for batch in tqdm(train_loader, desc=f"Training Epoch {epoch+1}/{num_epochs}"):
+            optimizer.zero_grad()
+
+            input_ids, attention_mask, labels = [
+                item.to(device) for item in batch]
+
+            outputs = model(input_ids=input_ids,
+                            attention_mask=attention_mask, labels=labels)
+            loss = outputs['loss']
+            logits = outputs['logits']
+
+            preds = torch.argmax(logits, dim=-1)
+
+            all_preds.extend(preds.cpu().tolist())
+            all_labels.extend(labels.cpu().tolist())
 
             loss.backward()
             optimizer.step()
 
             total_loss += loss.item()
 
-        # Calculate training metrics
-        accuracy = accuracy_score(all_labels, all_preds) * 100
-        f1 = f1_score(all_labels, all_preds, average="weighted")
+        train_accuracy = accuracy_score(all_labels, all_preds) * 100
+        train_f1 = f1_score(all_labels, all_preds, average="weighted")
 
-        # Validation phase
+        acc_train.append(train_accuracy)
+        f1_train.append(train_f1)
+
         model.eval()
-        val_correct = 0
-        val_samples = 0
         val_all_labels = []
         val_all_preds = []
 
@@ -118,17 +152,19 @@ def train_with_validation(model, train_loader, val_loader, optimizer, device, nu
                 val_all_preds.extend(preds.cpu().tolist())
                 val_all_labels.extend(labels.cpu().tolist())
 
-                correct = (preds == labels).sum().item()
-                val_correct += correct
-                val_samples += labels.size(0)
-
         val_accuracy = accuracy_score(val_all_labels, val_all_preds) * 100
-        val_f1 = f1_score(val_all_labels, val_all_preds, average="weighted")
+        val_f1_score = f1_score(
+            val_all_labels, val_all_preds, average="weighted")
+
+        acc_val.append(val_accuracy)
+        f1_val.append(val_f1_score)
 
         print(
-            f"Epoch {epoch+1}, Loss: {total_loss / len(train_loader):.6f}, Accuracy: {accuracy:.6f}%, F1 Score: {f1:.6f}")
+            f"Epoch {epoch+1}, Loss: {total_loss / len(train_loader):.6f}, Accuracy: {train_accuracy:.6f}%, F1 Score: {train_f1:.6f}")
         print(
-            f"Validation Accuracy: {val_accuracy:.6f}%, Validation F1 Score: {val_f1:.6f}")
+            f"Validation Accuracy: {val_accuracy:.6f}%, Validation F1 Score: {val_f1_score:.6f}")
+
+    return f1_train, f1_val, acc_train, acc_val
 
 
 def test(model, test_loader, device):
@@ -146,10 +182,8 @@ def test(model, test_loader, device):
             predictions.extend(preds.cpu().numpy())
             true_labels.extend(labels.cpu().numpy())
 
-    # Calculate F1 score (weighted) for multiclass classification
     f1 = f1_score(true_labels, predictions, average='weighted')
 
-    # Calculate accuracy
     accuracy = accuracy_score(true_labels, predictions) * 100
 
     print(f"F1 Score (Weighted): {f1:.4f}")
@@ -157,61 +191,55 @@ def test(model, test_loader, device):
     return predictions, true_labels
 
 
-df = pd.read_csv('csv/dataset.csv')
-
-labels = df['Artifact Id']
-
-label_counts = labels.value_counts()
-
-filtered_labels_at_least_5 = label_counts[label_counts >= 5]
-
-filtered_labels_at_least_5_list = filtered_labels_at_least_5.index.tolist()
-
-filtered_df = df[df['Artifact Id'].isin(filtered_labels_at_least_5_list)]
-
-print(filtered_df['Artifact Id'].value_counts())
-
-filtered_labels_balance = label_counts[(
-    label_counts >= 5) & (label_counts <= 200)]
-
-filtered_labels_balance_list = filtered_labels_balance.index.tolist()
-
-filtered_balance_df = df[df['Artifact Id'].isin(filtered_labels_balance_list)]
-
-command_df = df[df['Artifact Id'] == 'd3f:Command']
-sample_size = min(len(command_df), 16)
-sampled_command_df = command_df.sample(n=sample_size, random_state=42)
-combined_df = pd.concat([filtered_balance_df, sampled_command_df])
-
-combined_df.reset_index(drop=True, inplace=True)
-
-print(combined_df['Artifact Id'].value_counts())
-
-label_mapping = {label: idx for idx, label in enumerate(
-    filtered_labels_at_least_5_list)}
-
-train_val_df, test_df = train_test_split(combined_df,
-                                         test_size=0.2,
-                                         stratify=combined_df['Artifact Id'],
-                                         random_state=42)
-train_df, val_df = train_test_split(train_val_df,
-                                    test_size=0.2,
-                                    stratify=train_val_df['Artifact Id'],
-                                    random_state=42)
-
-model = CustomBertModel(num_labels=len(filtered_labels_at_least_5_list))
-optimizer = AdamW(model.parameters(), lr=learning_rate)
-tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-model.to(device)
-
-
 def main():
+    df = pd.read_csv('csv/dataset.csv')
+
+    labels = df['Artifact Id']
+
+    label_counts = labels.value_counts()
+
+    filtered_labels_at_least_5 = label_counts[label_counts >= 5]
+
+    filtered_labels_at_least_5_list = filtered_labels_at_least_5.index.tolist()
+
+    filtered_df = df[df['Artifact Id'].isin(filtered_labels_at_least_5_list)]
+
+    filtered_labels_balance = label_counts[(
+        label_counts >= 5) & (label_counts <= 200)]
+
+    filtered_labels_balance_list = filtered_labels_balance.index.tolist()
+
+    filtered_balance_df = df[df['Artifact Id'].isin(
+        filtered_labels_balance_list)]
+
+    command_df = df[df['Artifact Id'] == 'd3f:Command']
+    sample_size = min(len(command_df), 16)
+    sampled_command_df = command_df.sample(n=sample_size, random_state=42)
+    combined_df = pd.concat([filtered_balance_df, sampled_command_df])
+
+    combined_df.reset_index(drop=True, inplace=True)
+
+    label_mapping = {label: idx for idx, label in enumerate(
+        filtered_labels_at_least_5_list)}
+
+    train_val_df, test_df = train_test_split(combined_df,
+                                             test_size=0.2,
+                                             stratify=combined_df['Artifact Id'],
+                                             random_state=42)
+    train_df, val_df = train_test_split(train_val_df,
+                                        test_size=0.2,
+                                        stratify=train_val_df['Artifact Id'],
+                                        random_state=42)
+
+    model = CustomBertModel(num_labels=len(filtered_labels_at_least_5_list))
+    optimizer = AdamW(model.parameters(), lr=learning_rate)
+    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+    model.to(device)
 
     train_dataset = create_dataset(train_df, tokenizer, label_mapping)
     val_dataset = create_dataset(val_df, tokenizer, label_mapping)
     test_dataset = create_dataset(test_df, tokenizer, label_mapping)
 
-    # Create DataLoaders
     train_loader = DataLoader(train_dataset, sampler=RandomSampler(
         train_dataset), batch_size=batch_size)
     val_loader = DataLoader(val_dataset, sampler=SequentialSampler(
