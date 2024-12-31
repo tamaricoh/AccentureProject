@@ -8,7 +8,8 @@ from transformers import BertTokenizer, BertForSequenceClassification, AdamW
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 from sklearn.metrics import f1_score
 from sklearn.metrics import accuracy_score
-from pys.data import train_df, val_df, test_df, filtered_labels_at_least_5_list, label_mapping
+# , label_mapping
+from pys.data import train_df, val_df, test_df, filtered_labels_at_least_5_list
 from pys.params import learning_rate, num_epochs, batch_size
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
@@ -50,7 +51,6 @@ def create_dataset(df, tokenizer, label_mapping):
     # Default to -1 for unknown labels
     labels = torch.tensor([label_mapping.get(x, -1)
                           for x in df['Artifact Id']])
-
     input_ids = encodings['input_ids']
     attention_mask = encodings['attention_mask']
 
@@ -58,11 +58,14 @@ def create_dataset(df, tokenizer, label_mapping):
     return dataset
 
 
-def train(model, train_loader, optimizer, device, num_epochs):
+def train(model, train_loader, optimizer, device, num_epochs, scheduler=None):
+    f1_train = []
+    acc_train = []
+    loss_train = []
+
     for epoch in range(num_epochs):
         model.train()
         total_loss = 0
-
         all_labels = []
         all_preds = []
 
@@ -71,7 +74,6 @@ def train(model, train_loader, optimizer, device, num_epochs):
 
             input_ids, attention_mask, labels = [
                 item.to(device) for item in batch]
-
             outputs = model(input_ids=input_ids,
                             attention_mask=attention_mask, labels=labels)
             loss = outputs['loss']
@@ -87,14 +89,21 @@ def train(model, train_loader, optimizer, device, num_epochs):
 
             total_loss += loss.item()
 
-        accuracy = accuracy_score(all_labels, all_preds) * 100
-        f1 = f1_score(all_labels, all_preds, average="weighted")
+        train_accuracy = accuracy_score(all_labels, all_preds) * 100
+        train_f1 = f1_score(all_labels, all_preds, average="weighted")
+        train_loss = total_loss / len(train_loader)
 
-        print(
-            f"Epoch {epoch+1}, Loss: {total_loss / len(train_loader):.4f}, Accuracy: {accuracy:.2f}%, F1 Score: {f1:.4f}")
+        acc_train.append(train_accuracy)
+        f1_train.append(train_f1)
+        loss_train.append(train_loss)
+
+        if scheduler:
+            scheduler.step()
+
+    return f1_train, acc_train, loss_train
 
 
-def train_with_validation(model, train_loader, val_loader, optimizer, scheduler, device, num_epochs):
+def train_with_validation(model, train_loader, val_loader, optimizer, device, num_epochs, scheduler=None):
     f1_train = []
     f1_val = []
     acc_train = []
@@ -173,10 +182,10 @@ def train_with_validation(model, train_loader, val_loader, optimizer, scheduler,
         print(
             f"Validation Accuracy: {val_accuracy:.6f}%, Validation F1 Score: {val_f1:.6f}")
 
-        if isinstance(scheduler, ReduceLROnPlateau):
-            scheduler.step(val_loss)
-        else:
-            scheduler.step()
+        # if isinstance(scheduler, ReduceLROnPlateau):
+        #     scheduler.step(val_loss)
+        # else:
+        #     scheduler.step()
 
     return f1_train, f1_val, acc_train, acc_val, loss_train, loss_val
 
@@ -202,7 +211,8 @@ def test(model, test_loader, device):
 
     print(f"F1 Score (Weighted): {f1:.4f}")
     print(f"Accuracy: {accuracy:.2f}%")
-    return predictions, true_labels
+    # return predictions, true_labels # Previous version before 31.12 changes
+    return f1, accuracy
 
 
 def main():
@@ -211,6 +221,9 @@ def main():
     optimizer = AdamW(model.parameters(), lr=learning_rate)
     tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
     model.to(device)
+
+    label_mapping = {label: idx for idx, label in enumerate(
+        filtered_labels_at_least_5_list)}
 
     train_dataset = create_dataset(train_df, tokenizer, label_mapping)
     val_dataset = create_dataset(val_df, tokenizer, label_mapping)
