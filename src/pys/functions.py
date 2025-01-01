@@ -26,6 +26,7 @@ class CustomBertModel(nn.Module):
         # Use BertForSequenceClassification directly
         self.bert = BertForSequenceClassification.from_pretrained(
             'bert-base-uncased', num_labels=num_labels)
+        self.extra_dropout = nn.Dropout(0.2)
 
     def forward(self, input_ids, attention_mask, labels=None):
         outputs = self.bert(input_ids=input_ids,
