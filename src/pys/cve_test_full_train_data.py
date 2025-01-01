@@ -1,7 +1,8 @@
 import pandas as pd
 
 # Load training and test datasets
-train_df = pd.read_csv('../csv/merged_aug.csv')
+# train_df = pd.read_csv('../csv/merged_aug.csv')
+train_df = pd.read_csv('../csv/merged_aug_less.csv')
 test_df = pd.read_csv('../csv/cve_data.csv')
 
 train_labels = train_df['Artifact Id']

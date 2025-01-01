@@ -2,7 +2,8 @@ import pandas as pd
 
 dataset_df = pd.read_csv('../csv/dataset.csv')
 baseline_df = pd.read_csv('../csv/baseline.csv')
-dataset_aug_df = pd.read_csv('../csv/dataset_aug.csv')
+# dataset_aug_df = pd.read_csv('../csv/dataset_aug.csv')
+dataset_aug_df = pd.read_csv('../csv/dataset_aug_less.csv')
 test_df = pd.read_csv('../csv/cve_data.csv')
 
 baseline_descriptions = baseline_df['Example Description'].tolist()
