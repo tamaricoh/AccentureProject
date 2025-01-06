@@ -194,7 +194,7 @@ def train_with_validation(model, train_loader, val_loader, optimizer, device, nu
 def test(model, test_loader, device, tokenizer, label_mapping):
     model.eval()
     predictions, true_labels = [], []
-    wrong_samples = []  # רשימה לשמירת דגימות שגויות
+    wrong_samples = []
 
     with torch.no_grad():
         for batch_idx, batch in enumerate(tqdm(test_loader, desc="Evaluating")):
