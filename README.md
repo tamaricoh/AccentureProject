@@ -31,9 +31,6 @@ The project was developed in a **Conda environment** using Python 3.12. All the 
 
 Detailed instructions for setting up and running the project are provided in the associated Jupyter notebook (`.ipynb`).
 
-**Note:**  
-A significant portion of the code is commented out because it was part of an earlier implementation that included K-fold cross-validation.
-
 ## Requirements
 
 - Conda environment (Python 3.12)
