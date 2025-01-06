@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import torch
+import json
 import datetime
 from torch import nn
 from tqdm.notebook import tqdm
@@ -190,12 +191,13 @@ def train_with_validation(model, train_loader, val_loader, optimizer, device, nu
     return f1_train, f1_val, acc_train, acc_val, loss_train, loss_val
 
 
-def test(model, test_loader, device):
+def test(model, test_loader, device, tokenizer):
     model.eval()
     predictions, true_labels = [], []
+    wrong_samples = []  # רשימה לשמירת דגימות שגויות
 
     with torch.no_grad():
-        for batch in tqdm(test_loader, desc="Evaluating"):
+        for batch_idx, batch in enumerate(tqdm(test_loader, desc="Evaluating")):
             input_ids, attention_mask, labels = [
                 item.to(device) for item in batch]
             outputs = model(input_ids=input_ids, attention_mask=attention_mask)
@@ -205,14 +207,30 @@ def test(model, test_loader, device):
             predictions.extend(preds.cpu().numpy())
             true_labels.extend(labels.cpu().numpy())
 
-    f1 = f1_score(true_labels, predictions, average='weighted')
+            for i, (pred, label) in enumerate(zip(preds.cpu().numpy(), labels.cpu().numpy())):
+                if pred != label:
+                    decoded_text = tokenizer.decode(
+                        input_ids[i].cpu().tolist(),
+                        skip_special_tokens=True
+                    )
+                    wrong_samples.append({
+                        "batch_idx": batch_idx,
+                        "sample_idx": i,
+                        "text": decoded_text,
+                        "true_label": label,
+                        "predicted_label": pred
+                    })
 
+    f1 = f1_score(true_labels, predictions, average='weighted')
     accuracy = accuracy_score(true_labels, predictions) * 100
 
     print(f"F1 Score (Weighted): {f1:.4f}")
     print(f"Accuracy: {accuracy:.2f}%")
-    # return predictions, true_labels # Previous version before 31.12 changes
-    return f1, accuracy
+
+    with open("wrong_samples.json", "w", encoding="utf-8") as f:
+        json.dump(wrong_samples, f, ensure_ascii=False, indent=4)
+
+    return f1, accuracy, wrong_samples
 
 
 def main():
