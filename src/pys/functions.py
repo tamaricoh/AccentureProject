@@ -191,7 +191,7 @@ def train_with_validation(model, train_loader, val_loader, optimizer, device, nu
     return f1_train, f1_val, acc_train, acc_val, loss_train, loss_val
 
 
-def test(model, test_loader, device, tokenizer):
+def test(model, test_loader, device, tokenizer, label_mapping):
     model.eval()
     predictions, true_labels = [], []
     wrong_samples = []  # רשימה לשמירת דגימות שגויות
@@ -217,8 +217,8 @@ def test(model, test_loader, device, tokenizer):
                         "batch_idx": batch_idx,
                         "sample_idx": i,
                         "text": decoded_text,
-                        "true_label": label,
-                        "predicted_label": pred
+                        "true_label": label_mapping.get(label, f"Unknown({label})"),
+                        "predicted_label": label_mapping.get(pred, f"Unknown({pred})")
                     })
 
     f1 = f1_score(true_labels, predictions, average='weighted')
