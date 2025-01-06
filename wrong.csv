@@ -1,4 +1,4 @@
-True Label,Predicted Label,Text
+True Label,Predicted Label,Example Description
 "d3f:OperatingSystem",d3f:InterprocessCommunication,"vulnerability in distro linux workbooth v2. 5 that allows to escalate privileges to the root user by manipulating the network configuration script."
 "d3f:OperatingSystem",d3f:InterprocessCommunication,"an issue was discovered in ubuntu wpa_supplicant that resulted in loading of arbitrary shared objects, which allows a local unprivileged attacker to escalate privileges to the user that wpa_supplicant runs as (usually root). membership in the netdev group or access to the dbus interface of wpa_supplicant allow an unprivileged user to specify an arbitrary path to a module to be loaded by the wpa_supplicant process; other escalation paths might exist."
 "d3f:OperatingSystem",d3f:HardwareDriver,"ubuntu's implementation of pulseaudio can be crashed by a malicious program if a bluetooth headset is connected."
