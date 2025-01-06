@@ -217,8 +217,8 @@ def test(model, test_loader, device, tokenizer, label_mapping):
                         "batch_idx": batch_idx,
                         "sample_idx": i,
                         "text": decoded_text,
-                        "true_label": label_mapping.get(label, f"Unknown({label})"),
-                        "predicted_label": label_mapping.get(pred, f"Unknown({pred})")
+                        "true_label": get_key_from_value(label, label_mapping),
+                        "predicted_label": get_key_from_value(pred, label_mapping),
                     })
 
     f1 = f1_score(true_labels, predictions, average='weighted')
@@ -228,6 +228,13 @@ def test(model, test_loader, device, tokenizer, label_mapping):
     print(f"Accuracy: {accuracy:.2f}%")
 
     return f1, accuracy, wrong_samples
+
+
+def get_key_from_value(value, mapping):
+    for key, val in mapping.items():
+        if val == value:
+            return key
+    return None
 
 
 def main():
