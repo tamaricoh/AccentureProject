@@ -227,9 +227,6 @@ def test(model, test_loader, device, tokenizer):
     print(f"F1 Score (Weighted): {f1:.4f}")
     print(f"Accuracy: {accuracy:.2f}%")
 
-    with open("wrong_samples.json", "w", encoding="utf-8") as f:
-        json.dump(wrong_samples, f, ensure_ascii=False, indent=4)
-
     return f1, accuracy, wrong_samples
 
 
